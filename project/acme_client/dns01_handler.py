@@ -1,11 +1,21 @@
 from dnslib import RR, dns
 from dnslib.server import BaseResolver, DNSServer
+from threading import Thread
+from dnslib import TXT
+
 
 # Starts a DNS server on port 10053 and runs on all network interface
 def start_dns_server(challenge_response, port=10053):
-    dns_server = DNSServer(DNS01Handler(challenge_response), port, address='0.0.0.0')
-    dns_server.start_thread()
+    dns01_server = DNSServer(DNS01Handler(challenge_response), port=10053, address="0.0.0.0")
+    dns01_thread = Thread(target = dns01_server.server.serve_forever)
+    dns01_thread.daemon = True
+    dns01_thread.start()
     print(f"DNS-01 Server is running on port {port}")
+
+def stop_dns_server(dns01_server):
+    dns01_server.server.shutdown()
+    dns01_server.server.server_close()
+    print("DNS-01 Server is stopped")
 
 class DNS01Handler(BaseResolver):
     def __init__(self, challenge_response):
@@ -14,7 +24,6 @@ class DNS01Handler(BaseResolver):
 
     # Process TXT queries for ACME challenge
     def resolve(self, request, handler):
-        
         reply = request.reply()
         qtype = request.q.qtype  # A for IP Address, TXT for DNS records
         domain = request.q.qname
