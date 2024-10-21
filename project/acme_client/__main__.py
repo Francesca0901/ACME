@@ -8,7 +8,7 @@ from acme_client.dns01_handler import DNS01Handler
 from argparse import ArgumentParser
 
 from dnslib import TXT
-from ACME_client import ACME_client
+from acme_client.ACME_client import ACME_client
 
 def parse_args():
     parser = ArgumentParser("ACME Client for handling certificate requests.")
@@ -52,6 +52,9 @@ if __name__ == "__main__":
     client.create_account()
     client.submit_order(args.domain)
 
-    client.solve_challenges()
-    cert_url = client.finalize_order()
-    client.download_cert(cert_url)
+    cert_url = client.solve_challenges()
+    if cert_url:
+        print("Certificate issuance successful; downloading certificate...")
+        client.download_cert(cert_url)
+    else:
+        print("Certificate issuance failed; cannot download certificate.")
