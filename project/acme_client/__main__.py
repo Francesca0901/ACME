@@ -2,13 +2,13 @@ from http.server import HTTPServer
 from threading import Thread
 from dnslib.server import DNSServer
 
-from acme_client.http01_handler import HTTP01Handler
-from acme_client.dns01_handler import DNS01Handler
+from http01_handler import HTTP01Handler
+from dns01_handler import DNS01Handler
 
 from argparse import ArgumentParser
 
 from dnslib import TXT
-from acme_client.ACME_client import ACME_client
+from ACME_client import ACME_client
 
 def parse_args():
     parser = ArgumentParser("ACME Client for handling certificate requests.")

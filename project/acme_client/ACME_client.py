@@ -4,8 +4,8 @@ import requests
 import json
 import base64
 from cryptography.hazmat.primitives.asymmetric import rsa
-import acme_client.utils as utils
-import acme_client.dns01_handler as dns01_handler
+import utils as utils
+import dns01_handler as dns01_handler
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend as default_backend
 
