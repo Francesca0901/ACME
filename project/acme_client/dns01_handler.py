@@ -3,7 +3,6 @@ from dnslib.server import BaseResolver, DNSServer
 from threading import Thread
 from dnslib import TXT
 
-
 # Starts a DNS server on port 10053 and runs on all network interface
 def start_dns_server(challenge_response, port=10053):
     dns01_server = DNSServer(DNS01Handler(challenge_response), port=10053, address="0.0.0.0")

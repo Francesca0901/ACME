@@ -8,7 +8,7 @@ from acme_client.dns01_handler import DNS01Handler
 from argparse import ArgumentParser
 
 from dnslib import TXT
-from ACME_client import ACMEClient
+from ACME_client import ACME_client
 
 def parse_args():
     parser = ArgumentParser("ACME Client for handling certificate requests.")
@@ -48,6 +48,10 @@ if __name__ == "__main__":
     #     http01_thread.join()
 
     # Your code should go here
-    client = ACMEClient(args.dir, args.record, args.domain)
+    client = ACME_client(args.dir, args.record, args.domain)
     client.create_account()
     client.submit_order(args.domain)
+
+    client.solve_challenges()
+    cert_url = client.finalize_order()
+    client.download_cert(cert_url)
