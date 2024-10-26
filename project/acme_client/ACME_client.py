@@ -8,6 +8,7 @@ import acme_client.utils as utils
 import acme_client.dns01_handler as dns01_handler
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend as default_backend
+from cryptography.hazmat.primitives.serialization import Encoding
 
 
 jose_header = {"Content-Type": "application/jose+json"}
@@ -279,7 +280,25 @@ class ACME_client():
     
     # Certificate revocation (POST /revokeCert)
     def revoke_cert(self):
-        pass
+        certificate = utils.b64encode(self.cert.public_bytes(encoding=Encoding.DER))
+        payload = {
+            "certificate": certificate
+        }   
+
+        protected_header = utils.get_protected_header("RS256", kid=self.account_kid, nonce=self.nonce, url=self.revokeCert_url)
+        encoded_header = utils.b64encode(json.dumps(protected_header))
+        encoded_payload = utils.b64encode(json.dumps(payload))
+
+        jws_object = utils.get_jws_object(encoded_header, encoded_payload, self.private_key)
+        response = requests.post(self.revokeCert_url, json=jws_object, headers=jose_header, verify=self.verify)
+
+        # Update nonce from response
+        self.nonce = response.headers.get('Replay-Nonce', self.get_nonce())
+
+        if response.status_code == 200:
+            print("Certificate revoked successfully")
+            return True
+        
 
 
 

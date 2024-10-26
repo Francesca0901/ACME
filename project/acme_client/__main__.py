@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     if args.revoke:
         print("Revoking certificate...")
-        pass
+        client.revoke_cert()
 
     # Shutting down the servers
     shutdown_server = shutdown_server()
