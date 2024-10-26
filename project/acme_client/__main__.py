@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 
 from dnslib import TXT
 from .ACME_client import ACME_client
+from .shutdown_server import shutdown_server
 
 def parse_args():
     parser = ArgumentParser("ACME Client for handling certificate requests.")
@@ -58,3 +59,12 @@ if __name__ == "__main__":
         client.download_cert(cert_url)
     else:
         print("Certificate issuance failed; cannot download certificate.")
+
+    if args.revoke:
+        print("Revoking certificate...")
+        pass
+
+    # Shutting down the servers
+    shutdown_server = shutdown_server()
+    print("Shutting down the servers...")
+    shutdown_server.shutdown()

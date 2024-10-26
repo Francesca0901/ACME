@@ -107,3 +107,4 @@ def generate_csr_key(domains):
         ))
 
     return csr_b64
+
