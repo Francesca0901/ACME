@@ -5,7 +5,7 @@ from dnslib import TXT
 
 # Starts a DNS server on port 10053 and runs on all network interface
 def start_dns_server(domain, txt_value, record, port=10053, address="0.0.0.0"):
-    resolver = DNS01Handler(domain, txt_value, record)
+    resolver = DNS01Handler(domain, txt_value, record, )
     dns_server = DNSServer(resolver, port=port, address=address)
     dns_server.start_thread()
     print(f"DNS-01 Server is running on port {port}, listening on {address}")
@@ -41,7 +41,7 @@ class DNS01Handler(BaseResolver):
             reply.add_answer(RR(domain, QTYPE.TXT, rdata=TXT(self.challenge_response), ttl=300))
             return reply
         elif qtype == QTYPE.A and query_domain == target_domain:
-            reply.add_answer(RR(domain, QTYPE.A, rdata=A(self.challenge_response), ttl=300))
+            reply.add_answer(RR(domain, QTYPE.A, rdata=A(self.record), ttl=300))
             return reply
         else:
             return reply
