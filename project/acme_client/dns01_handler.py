@@ -40,7 +40,7 @@ class DNS01Handler(BaseResolver):
         if qtype == QTYPE.TXT and query_domain == target_domain:
             reply.add_answer(RR(domain, QTYPE.TXT, rdata=TXT(self.challenge_response), ttl=300))
             return reply
-        elif qtype == QTYPE.A and query_domain == target_domain:
+        elif qtype == QTYPE.A:
             reply.add_answer(RR(domain, QTYPE.A, rdata=A(self.record), ttl=300))
             return reply
         else:
