@@ -177,7 +177,7 @@ class ACME_client():
                     print("Polling authorization status")
                     challenge_status = self.poll_status(challenge_url, success_status=["valid"], failure_status=["invalid"])
 
-                    dns01_handler.stop_dns_server(dns_server)
+                    # dns01_handler.stop_dns_server(dns_server)
 
                     if not challenge_status:
                         print("Challenge failed")
