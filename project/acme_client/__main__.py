@@ -4,7 +4,7 @@ from threading import Thread
 from dnslib.server import DNSServer
 
 from .http01_handler import HTTP01Handler
-from .dns01_handler import DNS01Handler
+from .dns01_handler import stop_dns_server
 
 from argparse import ArgumentParser
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     client.create_account()
     client.submit_order(args.domain)
 
-    cert_url = client.solve_challenges()
+    cert_url, dns_or_http_server = client.solve_challenges()
     if cert_url:
         print("Certificate issuance successful; downloading certificate...")
         client.download_cert(cert_url)
@@ -68,5 +68,6 @@ if __name__ == "__main__":
     # Shutting down the servers
     shutdown_server = ShutdownServer()
     shutdown_server.start_server("0.0.0.0", 5003)
+    stop_dns_server(dns_or_http_server)
     
     os._exit(0)

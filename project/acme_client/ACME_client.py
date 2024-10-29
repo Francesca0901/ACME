@@ -133,6 +133,8 @@ class ACME_client():
             domain = auth_requirement["identifier"]["value"]
             print(f"Processing authorization for domain: {domain}")
 
+            dns_or_http_server = False
+
             for challenge in auth_requirement["challenges"]:
                 if challenge["type"] == "dns-01":
                     print("Solving DNS challenge for domain: ", domain)
@@ -157,6 +159,7 @@ class ACME_client():
                         record=self.record,
                         address="0.0.0.0"
                     )
+                    dns_or_http_server = dns_server
 
                     # Notify the server that the challenge is ready
                     print("Notifying server that challenge is ready")
@@ -181,13 +184,13 @@ class ACME_client():
 
                     if not challenge_status:
                         print("Challenge failed")
-                        return False
+                        return False, dns_or_http_server
                     else:
                         print("Challenge succeeded")
 
         # Believe all requirements have been fulfilled, finalize the order
         cert_url = self.finalize_order()
-        return cert_url
+        return cert_url, dns_or_http_server
 
 
     # Polling challenge status and fetching certificates

@@ -1,4 +1,4 @@
-from dnslib import RR, dns, QTYPE, TXT
+from dnslib import RR, dns, QTYPE, TXT, A
 from dnslib.server import BaseResolver, DNSServer
 from threading import Thread
 from dnslib import TXT
@@ -39,6 +39,9 @@ class DNS01Handler(BaseResolver):
         # if qtype == QTYPE.TXT and "_acme-challenge" in str(domain):
         if qtype == QTYPE.TXT and query_domain == target_domain:
             reply.add_answer(RR(domain, QTYPE.TXT, rdata=TXT(self.challenge_response), ttl=300))
+            return reply
+        elif qtype == QTYPE.A and query_domain == target_domain:
+            reply.add_answer(RR(domain, QTYPE.A, rdata=A(self.challenge_response), ttl=300))
             return reply
         else:
             return reply
