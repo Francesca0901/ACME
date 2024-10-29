@@ -67,6 +67,6 @@ if __name__ == "__main__":
 
     # Shutting down the servers
     shutdown_server = ShutdownServer()
-    shutdown_server.start_server()
+    shutdown_server.start_server("0.0.0.0", 5003)
     
     os._exit(0)
