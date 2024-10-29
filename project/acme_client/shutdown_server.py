@@ -2,7 +2,7 @@ from http.server import SimpleHTTPRequestHandler
 from socketserver import TCPServer
 from threading import Thread
 
-from flask import Flask
+from flask import Flask, request
 
 # class ShutdownServer(SimpleHTTPRequestHandler):
 #     def do_GET(self):
@@ -30,7 +30,7 @@ from flask import Flask
 #         return httpd
 
 def shutdown_server():
-    func = Flask.request.environ.get('werkzeug.server.shutdown')
+    func = request.environ.get('werkzeug.server.shutdown')
     if func is None:
         raise RuntimeError('Not running with the Werkzeug Server')
     func()
