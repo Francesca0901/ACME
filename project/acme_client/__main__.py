@@ -1,4 +1,5 @@
 from http.server import HTTPServer
+import os
 from threading import Thread
 from dnslib.server import DNSServer
 
@@ -9,7 +10,7 @@ from argparse import ArgumentParser
 
 from dnslib import TXT
 from .ACME_client import ACME_client
-from .shutdown_server import shutdown_server
+from .shutdown_server import ShutdownServer, shutdown_server
 
 def parse_args():
     parser = ArgumentParser("ACME Client for handling certificate requests.")
@@ -65,6 +66,7 @@ if __name__ == "__main__":
         client.revoke_cert()
 
     # Shutting down the servers
-    shutdown_server = shutdown_server()
-    print("Shutting down the servers...")
-    shutdown_server.shutdown()
+    shutdown_server = ShutdownServer()
+    shutdown_server.start_server()
+    
+    os._exit(0)

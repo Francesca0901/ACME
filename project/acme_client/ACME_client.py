@@ -156,7 +156,6 @@ class ACME_client():
                         txt_value=hashed_key_authorization,
                         record=self.record,
                         address="0.0.0.0"
-                        # address="127.0.0.1"
                     )
 
                     # Notify the server that the challenge is ready
