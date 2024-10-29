@@ -119,7 +119,7 @@ class ACME_client():
             return None
 
     # Challenge solving (DNS-01 or HTTP-01)
-    def solve_challenges(self):
+    def solve_challenges(self, dns_handler, http_server):
         auth_urls = self.authorizations
         print(f"Auth urls: {auth_urls}")
         for auth_url in auth_urls:
@@ -132,8 +132,6 @@ class ACME_client():
 
             domain = auth_requirement["identifier"]["value"]
             print(f"Processing authorization for domain: {domain}")
-
-            dns_or_http_server = False
 
             for challenge in auth_requirement["challenges"]:
                 if challenge["type"] == "dns-01":
@@ -153,13 +151,14 @@ class ACME_client():
                         hashed_key_authorization = hashed_key_authorization.decode('utf-8')
 
                     # dns01_server = dns01_handler.start_dns_server(provisioned_RR, address=self.record)
-                    dns_server = dns01_handler.start_dns_server(
-                        domain=f"_acme-challenge.{domain}.",
-                        txt_value=hashed_key_authorization,
-                        record=self.record,
-                        address="0.0.0.0"
-                    )
-                    dns_or_http_server = dns_server
+                    # dns_server = dns01_handler.start_dns_server(
+                    #     domain=f"_acme-challenge.{domain}.",
+                    #     txt_value=hashed_key_authorization,
+                    #     record=self.record,
+                    #     address="0.0.0.0"
+                    # )
+                    print("!!!!!!!!!!!!!!!!!!provide_challenge_response")
+                    dns_handler.set_challenge_response(hashed_key_authorization)
 
                     # Notify the server that the challenge is ready
                     print("Notifying server that challenge is ready")
@@ -184,13 +183,13 @@ class ACME_client():
 
                     if not challenge_status:
                         print("Challenge failed")
-                        return False, dns_or_http_server
+                        return False
                     else:
                         print("Challenge succeeded")
 
         # Believe all requirements have been fulfilled, finalize the order
         cert_url = self.finalize_order()
-        return cert_url, dns_or_http_server
+        return cert_url
 
 
     # Polling challenge status and fetching certificates

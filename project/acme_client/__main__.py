@@ -4,7 +4,7 @@ from threading import Thread
 from dnslib.server import DNSServer
 
 from .http01_handler import HTTP01Handler
-from .dns01_handler import stop_dns_server
+from .dns01_handler import DNS01Handler, stop_dns_server
 
 from argparse import ArgumentParser
 
@@ -28,33 +28,25 @@ if __name__ == "__main__":
     # perform some sanity checks first. The built-in `argparse` library will suffice.
     args = parse_args()
 
-    # if args.challenge_type == 'dns01':
-    #     challenge_response = TXT("dummy_challenge_token") # TODO: Replace with actual challenge response
+    http01_server = HTTPServer(("0.0.0.0", 5002), HTTP01Handler)
+    http01_thread = Thread(target=http01_server.serve_forever)
+    http01_thread.daemon = True
+    http01_thread.start()
+    print("HTTP-01 server is running on port 5002")
 
-    #     print("DNS Servers are running...")
-
-    #     dns01_server = DNSServer(DNS01Handler(challenge_response), port=10053, address="0.0.0.0")
-    #     dns01_thread = Thread(target = dns01_server.server.serve_forever)
-    #     dns01_thread.daemon = True
-    #     dns01_thread.start()
-    #     dns01_thread.join()
-
-    # elif args.challenge_type == 'http01':
-    #     print("HTTP Servers are running...")
-
-    #     http01_server = HTTPServer(("0.0.0.0", 5002), HTTP01Handler)
-    #     # Hint: You will need more HTTP servers
-    #     http01_thread = Thread(target = http01_server.serve_forever)
-    #     http01_thread.daemon = True
-    #     http01_thread.start()
-    #     http01_thread.join()
+    dns01_handler = DNS01Handler(args.domain, args.record)
+    dns01_server = DNSServer(dns01_handler, port=10053, address="0.0.0.0")
+    dns01_thread = Thread(target=dns01_server.start_thread)
+    dns01_thread.daemon = True
+    dns01_thread.start()
+    print("DNS-01 server is running on port 10053")
 
     # Your code should go here
     client = ACME_client(args.dir, args.record, args.domain)
     client.create_account()
     client.submit_order(args.domain)
 
-    cert_url, dns_or_http_server = client.solve_challenges()
+    cert_url = client.solve_challenges(dns01_handler, http01_server)
     if cert_url:
         print("Certificate issuance successful; downloading certificate...")
         client.download_cert(cert_url)
@@ -68,6 +60,6 @@ if __name__ == "__main__":
     # Shutting down the servers
     shutdown_server = ShutdownServer()
     shutdown_server.start_server("0.0.0.0", 5003)
-    stop_dns_server(dns_or_http_server)
+    stop_dns_server(dns01_server)
     
     os._exit(0)
