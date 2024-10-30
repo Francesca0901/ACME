@@ -5,7 +5,8 @@ import json
 import base64
 from cryptography.hazmat.primitives.asymmetric import rsa
 import acme_client.utils as utils
-import acme_client.dns01_handler as dns01_handler
+# import acme_client.dns01_handler as dns01_handler
+import acme_client.http01_handler as http01_handler
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend as default_backend
 from cryptography.hazmat.primitives.serialization import Encoding
@@ -119,7 +120,7 @@ class ACME_client():
             return None
 
     # Challenge solving (DNS-01 or HTTP-01)
-    def solve_challenges(self, dns_handler, http_server):
+    def solve_challenges(self, dns_handler, http_handler):
         auth_urls = self.authorizations
         print(f"Auth urls: {auth_urls}")
         for auth_url in auth_urls:
@@ -131,24 +132,29 @@ class ACME_client():
             auth_requirement = response.json()
 
             domain = auth_requirement["identifier"]["value"]
-            print(f"Processing authorization for domain: {domain}")
+            print(f"solve_challenge is processing authorization for domain: {domain}")
+            
+           
 
             for challenge in auth_requirement["challenges"]:
-                if challenge["type"] == "dns-01":
+
+                challenge_token = challenge["token"]
+                challenge_url = challenge["url"]
+                if not challenge_token or not challenge_url:
+                    print("Invalid challenge data")
+                    continue
+
+                key_authorization = utils.get_key_authorization(challenge_token, self.jwk)
+                hashed_key_authorization = hashlib.sha256(key_authorization.encode('utf-8')).digest() # A sequence of bytes
+                hashed_key_authorization = utils.b64encode(hashed_key_authorization)
+
+                # Convert bytes to string if necessary
+                if isinstance(hashed_key_authorization, bytes):
+                    hashed_key_authorization = hashed_key_authorization.decode('utf-8')
+
+                print(f"!!!!!!!!Challenge type: {challenge['type']}")
+                if challenge["type"] in "dns-01":
                     print("Solving DNS challenge for domain: ", domain)
-                    challenge_token = challenge["token"]
-                    challenge_url = challenge["url"]
-                    if not challenge_token or not challenge_url:
-                        print("Invalid challenge data")
-                        continue
-
-                    key_authorization = utils.get_key_authorization(challenge_token, self.jwk)
-                    hashed_key_authorization = hashlib.sha256(key_authorization.encode('utf-8')).digest() # A sequence of bytes
-                    hashed_key_authorization = utils.b64encode(hashed_key_authorization)
-
-                    # Convert bytes to string if necessary
-                    if isinstance(hashed_key_authorization, bytes):
-                        hashed_key_authorization = hashed_key_authorization.decode('utf-8')
 
                     # dns01_server = dns01_handler.start_dns_server(provisioned_RR, address=self.record)
                     # dns_server = dns01_handler.start_dns_server(
@@ -157,35 +163,37 @@ class ACME_client():
                     #     record=self.record,
                     #     address="0.0.0.0"
                     # )
-                    print("!!!!!!!!!!!!!!!!!!provide_challenge_response")
                     dns_handler.set_challenge_response(hashed_key_authorization)
 
-                    # Notify the server that the challenge is ready
-                    print("Notifying server that challenge is ready")
+                elif challenge["type"] == "http-01":
+                    print("Solving HTTP challenge for domain: ", domain)
+                    http_handler.register_challenge(challenge_token, hashed_key_authorization)
 
-                    protected_header = utils.get_protected_header("RS256", jwk=None, kid=self.account_kid, nonce=self.nonce, url=challenge_url)
-                    encoded_header = utils.b64encode(json.dumps(protected_header))
-                    payload = {}
-                    encoded_payload = utils.b64encode(json.dumps(payload))
-                    jws_object = utils.get_jws_object(encoded_header, encoded_payload, self.private_key)
-                    response = requests.post(challenge_url, json=jws_object, headers=jose_header, verify=self.verify)
+                # Notify the server that the challenge is ready
+                print("Notifying server that challenge is ready")
 
-                    # Update nonce from response
-                    self.nonce = response.headers.get('Replay-Nonce', self.get_nonce())
+                protected_header = utils.get_protected_header("RS256", jwk=None, kid=self.account_kid, nonce=self.nonce, url=challenge_url)
+                encoded_header = utils.b64encode(json.dumps(protected_header))
+                payload = {}
+                encoded_payload = utils.b64encode(json.dumps(payload))
+                jws_object = utils.get_jws_object(encoded_header, encoded_payload, self.private_key)
+                response = requests.post(challenge_url, json=jws_object, headers=jose_header, verify=self.verify)
 
-                    # print(f"Response from server: {response.text}")
+                # Update nonce from response
+                self.nonce = response.headers.get('Replay-Nonce', self.get_nonce())
 
-                    # Poll the challenge status
-                    print("Polling authorization status")
-                    challenge_status = self.poll_status(challenge_url, success_status=["valid"], failure_status=["invalid"])
+                # Poll the challenge status
+                print("Polling authorization status")
+                challenge_status = self.poll_status(challenge_url, success_status=["valid"], failure_status=["invalid"])
 
-                    # dns01_handler.stop_dns_server(dns_server)
+                # dns01_handler.stop_dns_server(dns_server)
 
-                    if not challenge_status:
-                        print("Challenge failed")
-                        return False
-                    else:
-                        print("Challenge succeeded")
+                if not challenge_status:
+                    print("Challenge failed")
+                    return False
+                else:
+                    print("Challenge succeeded")
+
 
         # Believe all requirements have been fulfilled, finalize the order
         cert_url = self.finalize_order()
@@ -221,10 +229,6 @@ class ACME_client():
     # Certificate finalization while all challenges are valid (POST /finalize)
     def finalize_order(self):
         # # Make sure all auth are Valid
-        # print("Polling authorization status")
-        # if not self.poll_status(self.order_url, success_status=["valid", "processing", "ready"], failure_status="invalid"):
-        #     print("Failed to validate all authorizations")
-        #     return False
         
         # Send finalization request (CSR)
         print ("======Finalizing order======")

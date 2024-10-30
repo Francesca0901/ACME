@@ -20,17 +20,16 @@ def stop_dns_server(dns01_server):
 class DNS01Handler(BaseResolver):
     def __init__(self, domain, record):
         # self.challenge_response = challenge_response
-        # self.domain = domain
+        self.domain = domain
         self.record = record
         self.challenge_response = None
 
-        # print(f"self.domain: {self.domain}")
-
     def set_challenge_response(self, challenge_response):
         self.challenge_response = challenge_response
-        print(f"Challenge response set to: {self.challenge_response}")
+        print(f"!!!!!!!!!!Challenge response set to: {self.challenge_response}")
 
     # Process TXT queries for ACME challenge
+    # TODO: distinguish between example.com and _acme-challenge.example.com
     def resolve(self, request, handler):
         reply = request.reply()
         qtype = request.q.qtype  # A for IP Address, TXT for DNS records
@@ -42,12 +41,9 @@ class DNS01Handler(BaseResolver):
         # print(f"Target domain: {target_domain}")
 
         # if qtype == QTYPE.TXT and "_acme-challenge" in str(domain):
-        print(f"!!!!!!!!!!!Challenge response: {self.challenge_response}")
         if qtype == QTYPE.TXT:
             reply.add_answer(RR(domain, QTYPE.TXT, rdata=TXT(self.challenge_response), ttl=300))
             return reply
         elif qtype == QTYPE.A:
             reply.add_answer(RR(domain, QTYPE.A, rdata=A(self.record), ttl=300))
-            return reply
-        else:
             return reply

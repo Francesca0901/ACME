@@ -28,8 +28,13 @@ if __name__ == "__main__":
     # perform some sanity checks first. The built-in `argparse` library will suffice.
     args = parse_args()
 
-    http01_server = HTTPServer(("0.0.0.0", 5002), HTTP01Handler)
-    http01_thread = Thread(target=http01_server.serve_forever)
+    # http01_server = HTTPServer(("0.0.0.0", 5002), HTTP01Handler)
+    # http01_thread = Thread(target=http01_server.serve_forever)
+    # http01_thread.daemon = True
+    # http01_thread.start()
+
+    http01_handler = HTTP01Handler()
+    http01_thread = Thread(target=http01_handler.start_server, args=("0.0.0.0", 5002))
     http01_thread.daemon = True
     http01_thread.start()
     print("HTTP-01 server is running on port 5002")
@@ -46,7 +51,7 @@ if __name__ == "__main__":
     client.create_account()
     client.submit_order(args.domain)
 
-    cert_url = client.solve_challenges(dns01_handler, http01_server)
+    cert_url = client.solve_challenges(dns01_handler, http01_handler)
     if cert_url:
         print("Certificate issuance successful; downloading certificate...")
         client.download_cert(cert_url)

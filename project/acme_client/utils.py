@@ -70,6 +70,7 @@ def post_as_get(self, url):
         return response
     else:
         print(f"POST-as-GET failed with status code {response.status_code}")
+        print(response.text)
         return None
     
 def get_key_authorization(token, jwk):
@@ -99,7 +100,7 @@ def generate_csr_key(domains):
     csr_der = csr.public_bytes(encoding=Encoding.DER)
     csr_b64 = b64encode(csr_der)
 
-    with open("key.pem", "wb") as f:
+    with open("private_key.pem", "wb") as f:
         f.write(cert_private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
