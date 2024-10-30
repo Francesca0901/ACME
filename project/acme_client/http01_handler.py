@@ -47,6 +47,7 @@ class CertificateServer():
         @self.app.route('/')
         def return_certificate():
             print("Return certificate.")
+            return "HTTPS with certificate."
     
     def start_server(self):
         context = ('cert.pem','private_key.pem')
