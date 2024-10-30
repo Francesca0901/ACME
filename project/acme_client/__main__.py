@@ -3,14 +3,14 @@ import os
 from threading import Thread
 from dnslib.server import DNSServer
 
-from .http01_handler import HTTP01Handler
+from .http01_handler import HTTP01Handler, CertificateServer
 from .dns01_handler import DNS01Handler, stop_dns_server
 
 from argparse import ArgumentParser
 
 from dnslib import TXT
 from .ACME_client import ACME_client
-from .shutdown_server import ShutdownServer, shutdown_server
+from .shutdown_server import ShutdownServer
 
 def parse_args():
     parser = ArgumentParser("ACME Client for handling certificate requests.")
@@ -27,11 +27,10 @@ if __name__ == "__main__":
     # Hint: You may want to start by parsing command line arguments and
     # perform some sanity checks first. The built-in `argparse` library will suffice.
     args = parse_args()
-
-    # http01_server = HTTPServer(("0.0.0.0", 5002), HTTP01Handler)
-    # http01_thread = Thread(target=http01_server.serve_forever)
-    # http01_thread.daemon = True
-    # http01_thread.start()
+    if args.challenge_type == 'dns01':
+        args.challenge_type = 'dns-01'
+    elif args.challenge_type == 'http01':
+        args.challenge_type = 'http-01'
 
     http01_handler = HTTP01Handler()
     http01_thread = Thread(target=http01_handler.start_server, args=("0.0.0.0", 5002))
@@ -51,20 +50,35 @@ if __name__ == "__main__":
     client.create_account()
     client.submit_order(args.domain)
 
-    cert_url = client.solve_challenges(dns01_handler, http01_handler)
+    cert_url = client.solve_challenges(dns01_handler, http01_handler, args.challenge_type)
     if cert_url:
         print("Certificate issuance successful; downloading certificate...")
         client.download_cert(cert_url)
     else:
         print("Certificate issuance failed; cannot download certificate.")
 
+    certificate_server = CertificateServer("0.0.0.0", client.cert)
+    certificate_server_thread = Thread(target=certificate_server.start_server)
+    certificate_server_thread.daemon = True
+    certificate_server_thread.start()
+
     if args.revoke:
         print("Revoking certificate...")
         client.revoke_cert()
 
-    # Shutting down the servers
+    # Start the ShutdownServer
     shutdown_server = ShutdownServer()
-    shutdown_server.start_server("0.0.0.0", 5003)
-    stop_dns_server(dns01_server)
-    
-    os._exit(0)
+    shutdown_thread = Thread(
+        target=shutdown_server.run,
+        args=("0.0.0.0", certificate_server, dns01_server, http01_handler)
+    )
+    shutdown_thread.start()
+    print("Shutdown server is running on port 5003")
+
+    # Wait for the shutdown server to finish
+    shutdown_thread.join()
+
+    # Join other server threads if they haven't been joined already
+    http01_thread.join()
+    dns01_thread.join()
+    certificate_server_thread.join()

@@ -1,21 +1,12 @@
-from dnslib import RR, dns, QTYPE, TXT, A
+from dnslib import RR, dns, QTYPE, TXT, A, AAAA
 from dnslib.server import BaseResolver, DNSServer
 from threading import Thread
 from dnslib import TXT
 
-# # Starts a DNS server on port 10053 and runs on all network interface, will not be used
-# def start_dns_server(domain, record, port=10053, address="0.0.0.0"):
-#     resolver = DNS01Handler(domain, record)
-#     dns_server = DNSServer(resolver, port=port, address=address)
-#     dns_server.start_thread()
-#     print(f"DNS-01 Server is running on port {port}, listening on {address}")
-#     return dns_server
-
-
 def stop_dns_server(dns01_server):
-    dns01_server.stop()
-    # dns01_server.server.server_close()
-    print("DNS-01 Server is stopped")
+    if dns01_server:
+        dns01_server.stop()
+        print("DNS-01 Server is stopped")
 
 class DNS01Handler(BaseResolver):
     def __init__(self, domain, record):
@@ -46,4 +37,7 @@ class DNS01Handler(BaseResolver):
             return reply
         elif qtype == QTYPE.A:
             reply.add_answer(RR(domain, QTYPE.A, rdata=A(self.record), ttl=300))
+            return reply
+        else:
+            # Don't reply to AAAA
             return reply

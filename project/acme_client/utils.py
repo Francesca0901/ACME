@@ -49,29 +49,38 @@ def get_jws_object(encoded_header, encoded_payload, private_key):
         "payload": encoded_payload,
         "signature": b64encode(signature)
     }
+def post_as_get(acme_client, url):
+    while True:
+        protected_header = get_protected_header(
+            alg="RS256",
+            jwk=None,
+            kid=acme_client.account_kid,
+            nonce=acme_client.nonce,
+            url=url
+        )
+        encoded_header = b64encode(json.dumps(protected_header))
+        payload = ""  # Empty payload for POST-as-GET
+        encoded_payload = b64encode(payload)
+        jws_object = get_jws_object(encoded_header, encoded_payload, acme_client.private_key)
 
-def post_as_get(self, url):
-    # Prepare the JWS with an empty payload (POST-as-GET)
-    protected_header = get_protected_header(
-        "RS256", self.nonce, url, kid=self.account_kid
-    )
-    encoded_header = b64encode(json.dumps(protected_header))
+        response = requests.post(url, json=jws_object, headers=jose_header, verify=acme_client.verify)
 
-    empty_payload = ''
-    # encoded_payload = b64encode(json.dumps(empty_payload))
+        # Update nonce from response headers
+        acme_client.nonce = response.headers.get('Replay-Nonce', acme_client.get_nonce())
 
-    jws_object = get_jws_object(encoded_header, empty_payload, self.private_key)
-    response = requests.post(url, json=jws_object, headers=jose_header, verify=self.verify)
-
-    # Update nonce from response
-    self.nonce = response.headers.get('Replay-Nonce', self.get_nonce())
-
-    if response.status_code == 200:
-        return response
-    else:
+        if response.status_code == 200:
+            return response
+        elif response.status_code == 400:
+            error_response = response.json()
+            if error_response.get('type') == 'urn:ietf:params:acme:error:badNonce':
+                print("Received badNonce error, retrying with a new nonce...")
+                acme_client.get_nonce()
+                continue  # Retry the request with the new nonce
+        # Handle other errors
         print(f"POST-as-GET failed with status code {response.status_code}")
         print(response.text)
-        return None
+        return response
+    
     
 def get_key_authorization(token, jwk):
     # Serialize the JWK to JSON with lexicographically sorted keys and without whitespace

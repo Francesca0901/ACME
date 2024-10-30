@@ -1,31 +1,37 @@
-from http.server import SimpleHTTPRequestHandler
-import os
-from socketserver import TCPServer
-from threading import Thread
-
 from flask import Flask, request
+from werkzeug.serving import make_server
+import threading
 
-def shutdown_server():
-    # func = request.environ.get('werkzeug.server.shutdown')
-    # if func is None:
-    #     raise RuntimeError('Not running with the Werkzeug Server')
-    # func()
-
-    """Forcefully terminate the application."""
-    os._exit(0)
-
-class ShutdownServer():
+class ShutdownServer:
     def __init__(self):
-        server = Flask(__name__)
+        self.app = Flask(__name__)
+        self.server = None
+        self.server_thread = None
 
-        @server.route('/shutdown')
+    def run(self, host, certificate_server, dns_server, http01_handler):
+        @self.app.route('/shutdown')
         def shutdown():
-            shutdown_server()
-            print("======Server shutting down======")
-            return
+            print("Shutdown request received. Shutting down servers...")
+            # Stop the Certificate Server
+            if certificate_server:
+                certificate_server.shutdown()
+            # Stop the DNS Server
+            if dns_server:
+                dns_server.stop()
+            # Stop the HTTP-01 Handler
+            if http01_handler:
+                http01_handler.shutdown()
+            # Stop the ShutdownServer itself
+            threading.Thread(target=self.shutdown_server).start()
+            print("All servers shut down. Exiting application.")
+            return "All servers shut down. Exiting application."
 
-        self.server = server
+        self.server = make_server(host, 5003, self.app)
+        self.server_thread = threading.Thread(target=self.server.serve_forever)
+        self.server_thread.start()
 
-    def start_server(self, host, port):
-        # start threat
-        self.server.run(host=host, port=port, threaded=True)
+    def shutdown_server(self):
+        if self.server:
+            self.server.shutdown()
+            self.server_thread.join()
+            print("Shutdown server has shut down.")
